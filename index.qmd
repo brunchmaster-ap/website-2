@@ -1,0 +1,57 @@
+---
+title: "Billboard Graphic"
+execute:
+  echo: false
+---
+
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+```
+
+
+```{r}
+library(tidyverse)
+library(tidyr)
+
+# Load the data
+data("billboard", package = "tidyr")
+
+# Transform from wide to long format
+billboard_long <- billboard %>%
+  pivot_longer(
+    cols = starts_with("wk"),
+    names_to = "week",
+    values_to = "rank",
+    values_drop_na = TRUE
+  ) %>%
+  mutate(
+    week = as.integer(str_remove(week, "wk")),
+    artist_title = paste(artist, track, sep = " - ")
+  )
+
+# Choose a few popular songs to make the plot cleaner
+top_songs <- billboard_long %>%
+  group_by(artist_title) %>%
+  summarize(min_rank = min(rank)) %>%
+  top_n(-5, min_rank) %>%
+  pull(artist_title)
+
+filtered_data <- billboard_long %>%
+  filter(artist_title %in% top_songs)
+
+# Create the plot
+ggplot(filtered_data, aes(x = week, y = rank, color = artist_title)) +
+  geom_line(size = 1) +
+  scale_y_reverse() +  # Rank 1 is best, so reverse the y-axis
+  labs(
+    title = "Top 5 Billboard Songs: Chart Rank Over Time",
+    subtitle = "A closer look at how popular songs moved on the Billboard Hot 100",
+    x = "Week on Chart",
+    y = "Chart Rank (Lower is Better)",
+    color = "Artist - Track",
+    caption = "Source: tidyr::billboard dataset"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+```
